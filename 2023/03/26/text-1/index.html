@@ -1,0 +1,211 @@
+<!DOCTYPE html><html lang="en" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"><title>pwn | Hexo</title><meta name="author" content="John Doe"><meta name="copyright" content="John Doe"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#e2eff1"><meta name="description" content="栈迁移到0x601080这个位置，，但是got表结尾的位置在0x601030，离得很近，，如果ROP的时候调用了函数，栈帧就会提高，也许会覆盖got表，，got表里面都是些重要的read puts 等函数，覆盖了以后可能会导致程序无法正确运行，，，所以一开始迁移的时候地址选的大一点，这样增高栈帧也有一些余地，，，，而且后面要返回到main，main的一开始就是 sub rsp,60h ，会提高很多">
+<meta property="og:type" content="article">
+<meta property="og:title" content="pwn">
+<meta property="og:url" content="https://k-k4321.github.io/2023/03/26/text-1/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="栈迁移到0x601080这个位置，，但是got表结尾的位置在0x601030，离得很近，，如果ROP的时候调用了函数，栈帧就会提高，也许会覆盖got表，，got表里面都是些重要的read puts 等函数，覆盖了以后可能会导致程序无法正确运行，，，所以一开始迁移的时候地址选的大一点，这样增高栈帧也有一些余地，，，，而且后面要返回到main，main的一开始就是 sub rsp,60h ，会提高很多">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://k-k4321.github.io/img/head.png">
+<meta property="article:published_time" content="2023-03-26T13:52:34.000Z">
+<meta property="article:modified_time" content="2023-03-26T13:59:05.596Z">
+<meta property="article:author" content="John Doe">
+<meta property="article:tag" content="hexo">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://k-k4321.github.io/img/head.png"><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://k-k4321.github.io/2023/03/26/text-1/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.min.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: 'Copy successfully',
+    error: 'Copy error',
+    noSupport: 'The browser does not support'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: 'days',
+  date_suffix: {
+    just: 'Just',
+    min: 'minutes ago',
+    hour: 'hours ago',
+    day: 'days ago',
+    month: 'months ago'
+  },
+  copyright: {"limitCount":20,"languages":{"author":"Author: John Doe","link":"Link: ","source":"Source: Hexo","info":"Copyright is owned by the author. For commercial reprints, please contact the author for authorization. For non-commercial reprints, please indicate the source."}},
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery/dist/fjGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery/dist/fjGallery.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  }
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'pwn',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: false,
+  postUpdate: '2023-03-26 21:59:05'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(win=>{
+    win.saveToLocal = {
+      set: function setWithExpiry(key, value, ttl) {
+        if (ttl === 0) return
+        const now = new Date()
+        const expiryDay = ttl * 86400000
+        const item = {
+          value: value,
+          expiry: now.getTime() + expiryDay,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      },
+
+      get: function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        if (!itemStr) {
+          return undefined
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        if (now.getTime() > item.expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return item.value
+      }
+    }
+  
+    win.getScript = url => new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.async = true
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    })
+  
+    win.getCSS = url => new Promise((resolve, reject) => {
+      const link = document.createElement('link')
+      link.rel = 'stylesheet'
+      link.href = url
+      link.onload = () => resolve()
+      link.onerror = () => reject()
+      document.head.appendChild(link)
+    })
+  
+      win.activateDarkMode = function () {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = function () {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#e2eff1')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          if (t === 'dark') activateDarkMode()
+          else if (t === 'light') activateLightMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+    const detectApple = () => {
+      if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+    })(window)</script><meta name="generator" content="Hexo 6.3.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="/img/head.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="sidebar-site-data site-data is-center"><a href="/archives/"><div class="headline">Articles</div><div class="length-num">3</div></a><a href="/tags/"><div class="headline">Tags</div><div class="length-num">1</div></a><a href="/categories/"><div class="headline">Categories</div><div class="length-num">0</div></a></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> List</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/music/"><i class="fa-fw fas fa-music"></i><span> Music</span></a></li><li><a class="site-page child" href="/movies/"><i class="fa-fw fas fa-video"></i><span> Movie</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> Link</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header"><nav id="nav"><span id="blog-info"><a href="/" title="Hexo"><span class="site-name">Hexo</span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> List</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/music/"><i class="fa-fw fas fa-music"></i><span> Music</span></a></li><li><a class="site-page child" href="/movies/"><i class="fa-fw fas fa-video"></i><span> Movie</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> Link</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div><div id="toggle-menu"><a class="site-page" href="javascript:void(0);"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">pwn</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">Created</span><time class="post-meta-date-created" datetime="2023-03-26T13:52:34.000Z" title="Created 2023-03-26 21:52:34">2023-03-26</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">Updated</span><time class="post-meta-date-updated" datetime="2023-03-26T13:59:05.596Z" title="Updated 2023-03-26 21:59:05">2023-03-26</time></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">Word count:</span><span class="word-count">1.3k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">Reading time:</span><span>4min</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="pwn"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">Post View:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><p>栈迁移到0x601080这个位置，，但是got表结尾的位置在0x601030，离得很近，，如果ROP的时候调用了函数，栈帧就会提高，也许会覆盖got表，，got表里面都是些重要的read puts 等函数，覆盖了以后可能会导致程序无法正确运行，，，所以一开始迁移的时候地址选的大一点，这样增高栈帧也有一些余地，，，，而且后面要返回到main，main的一开始就是 sub rsp,60h ，会提高很多栈</p>
+<p>不知道为什么这道题最后rop没法用system，，可能还是这个fake栈有很多相邻数据，调用函数的时候提高栈帧可能会修改重要的数据</p>
+<p>canary末尾数字为00</p>
+<p>Python rjust() 返回一个原字符串右对齐,并使用空格填充至长度 width 的新字符串。如果指定的长度小于字符串的长度则返回原字符串。</p>
+<p>shellcode &#x3D; asm(‘xor ecx,ecx;xor edx,edx;push 0;push 0x0068732f;push 0x6e69622f;mov ebx,esp;mov eax,0xb;int 0x80’)</p>
+<p>我们知道dl这个寄存器是控制输入字符的多少的，也就是所我们可以输入0x3c个字符<br>通过最后的add esp,14h 我们可以知道esp距离ret的地址0x14个字节（内平栈）,也就是我们输入的参数buf的大小只有0x14，但是我们读入了0x3c，存在溢出漏洞</p>
+<p>fmtstr_payload(offset, writes, numbwritten&#x3D;0, write_size&#x3D;’byte’)<br>第一个参数表示格式化字符串的偏移，在本题中我们已知是8；<br>第二个参数表示需要利用%n写入的数据，采用字典形式，我们要将read的GOT数据改为one_gadget函数地址，就写成{readGOT: one_gadget}；<br>第三个参数表示已经输出的字符个数,这里我们是0xa；<br>第四个参数表示写入方式，是按字节（byte）、按双字节（short）还是按四字节（int），对应着hhn、hn和n，默认值是byte，即按hhn写。<br>fmtstr_payload函数返回的就是payload</p>
+<p>%08x</p>
+<p>close(1)close(2)关掉了标准输出和标准错误<br>学到了exec，exec 1&gt;&amp;0标准输出重定向到标准输入，可以看成重启了一下标准输出，这时就可以看到输出的内容了。</p>
+<p>汇编溯源</p>
+<p>没法利用system@plt地址，因为plt地址需要返回值，可溢出的地址位数不够0x24-0x18&#x3D;0xc，所以只能用shell()里的call system来调用system，call函数不用返回值了，它会自己把下一条指令给压进去</p>
+<p>next(elf.search(b”&#x2F;bin&#x2F;sh”))</p>
+<p>strings qqq | grep sh<br>next(elf.search(b”sh\x00”))</p>
+<p>在构造ropchain链实现execve系统调用时，最难的是ebx的参数，因为该参数需要的是“&#x2F;bin&#x2F;sh\x00”的地址，且只构造”sh\x00”是不行的（但system(“sh\x00”)是可以的）</p>
+<p>mprotect函数原型如下：int mprotect(const void *start, size_t len, int prot);，第一个是开辟的地址起始位置，需要和内存页对齐，也就是能被0x1000整除；第二参数也需要是内存页的整数倍；第三个是开辟的内存属性，7代表可读可写可执行。</p>
+<p>from struct import pack<br>ROPgadget –binary rop –ropchain</p>
+<p>Ubuntu16中pwntools elf.plt用不了</p>
+<p>;cat flag</p>
+<p>shellcode&#x3D;asm(shellcraft.sh())          32位与64位的shellcode不一样，要区分</p>
+<p>bin_sh&#x3D;libc.dump(‘str_bin_sh’)+offset</p>
+<p>s进入函数</p>
+<p>有些时候运用栈溢出需要正常结束程序</p>
+<p>jg   比大小</p>
+<p>atoi (表示 ascii to integer)是把字符串转换成 整型 数的一个 函数</p>
+<p>RELRO保护原理<br>简介<br>由于 GOT和PLT以及延迟绑定的原因，在启用延迟绑定时，符号解析只发生在第一次使用的时候，该过程是通过PLT表进行的，解析完成后，相应的GOT条目会被修<br>改为正确的函数地址。因此，在延迟绑定的情况下。.got.plt必须可写，这就给了攻击者篡改地址劫持程序的执行的可能。</p>
+<p>RELRO（ReLocation Read-Only）机制的提出就是为了解决延迟绑定的安全问题，它最初于2004年由Redhat的工程师Jakub jelnek实现，他将符号重定位表设置为只读，或者在程序启动<br>时就解析并绑定所有的动态符号，从而避免GOT上的地址被篡改。RELRO有两种形式：</p>
+<p>partial PELRO：一些段（包括.dynamic,.got等）在初始化后会被标记为只读。在unbuntu16.04（GCC-5.4.0）上，默认开启Partial RELRO。<br>**Full RELRO **：除了Partial RELRO，延迟绑定将被禁止，所有的导入符号将在开始时被解析，.got.plt段会被完全初始化为目标函数的最终地址，并被mprotect标记为只读，但其实.got.plt<br>会被直接合并到.got，也就看不到这段了。另外link_map和_dl_runtime_reolve的地址也不会被装入。开启Full RELRO会对程序启动时的性能造成一定的影响，但也只有这样才能防止攻击者篡改GOT。</p>
+<p>Partial RELRO 那说明got表可写，可以通过改写got表为想要的函数，堆通常的利用方法</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">Author: </span><span class="post-copyright-info"><a href="https://k-k4321.github.io">John Doe</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">Link: </span><span class="post-copyright-info"><a href="https://k-k4321.github.io/2023/03/26/text-1/">https://k-k4321.github.io/2023/03/26/text-1/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">Copyright Notice: </span><span class="post-copyright-info">All articles in this blog are licensed under <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> unless stating additionally.</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/hexo/">hexo</a></div><div class="post_share"><div class="social-share" data-image="/img/head.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/2023/02/13/text/" title=""><div class="cover" style="background: var(--default-bg-color)"></div><div class="pagination-info"><div class="label">Next Post</div><div class="next_info"></div></div></a></div></nav><hr/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> Comment</span></div></div><div class="comment-wrap"><div><div class="vcomment" id="vcomment"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="/img/head.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">John Doe</div><div class="author-info__description"></div></div><div class="card-info-data site-data is-center"><a href="/archives/"><div class="headline">Articles</div><div class="length-num">3</div></a><a href="/tags/"><div class="headline">Tags</div><div class="length-num">1</div></a><a href="/categories/"><div class="headline">Categories</div><div class="length-num">0</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/xxxxxx"><i class="fab fa-github"></i><span>Follow Me</span></a></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>Announcement</span></div><div class="announcement_content">This is my Blog</div></div><div class="sticky_layout"><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>Recent Post</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2023/03/26/text-1/" title="pwn">pwn</a><time datetime="2023-03-26T13:52:34.000Z" title="Created 2023-03-26 21:52:34">2023-03-26</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2023/02/13/text/" title="No title">No title</a><time datetime="2023-02-13T07:55:15.788Z" title="Created 2023-02-13 15:55:15">2023-02-13</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2023/02/13/hello-world/" title="Hello World">Hello World</a><time datetime="2023-02-13T07:23:43.102Z" title="Created 2023-02-13 15:23:43">2023-02-13</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2023 By John Doe</div><div class="footer_custom_text">欢迎来到我的 <a target="_blank" rel="noopener" href="https://butterfly.js.org/">随记</a>!</div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="Read Mode"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="Switch Between Light And Dark Mode"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="Toggle between single-column and double-column"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="Setting"><i class="fas fa-cog fa-spin"></i></button><a id="to_comment" href="#post-comment" title="Scroll To Comments"><i class="fas fa-comments"></i></a><button id="go-up" type="button" title="Back To Top"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.umd.min.js"></script><div class="js-pjax"><script>function loadValine () {
+  function initValine () {
+    const valine = new Valine(Object.assign({
+      el: '#vcomment',
+      appId: '',
+      appKey: '',
+      avatar: 'hide',
+      serverURLs: '',
+      emojiMaps: "",
+      path: window.location.pathname,
+      visitor: false
+    }, null))
+  }
+
+  if (typeof Valine === 'function') initValine() 
+  else getScript('https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js').then(initValine)
+}
+
+if ('Valine' === 'Valine' || !true) {
+  if (true) btf.loadComment(document.getElementById('vcomment'),loadValine)
+  else setTimeout(loadValine, 0)
+} else {
+  function loadOtherComment () {
+    loadValine()
+  }
+}</script></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
